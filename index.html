@@ -1,0 +1,667 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Morning Science Feed</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet" />
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #0f0f0f;
+    --bg2: #161616;
+    --bg3: #1e1e1e;
+    --border: rgba(255,255,255,0.08);
+    --border-hover: rgba(255,255,255,0.16);
+    --text: #f0ede8;
+    --text2: #9a9590;
+    --text3: #5a5650;
+    --accent: #c8b89a;
+    --accent2: #8b9e8a;
+    --theory: #9b8ec4;
+    --theory-bg: rgba(155,142,196,0.12);
+    --exp: #7ab8a0;
+    --exp-bg: rgba(122,184,160,0.12);
+    --comp: #c4a46b;
+    --comp-bg: rgba(196,164,107,0.12);
+    --serif: 'Instrument Serif', Georgia, serif;
+    --mono: 'DM Mono', monospace;
+    --sans: 'DM Sans', system-ui, sans-serif;
+    --radius: 10px;
+    --radius-sm: 6px;
+  }
+
+  html { background: var(--bg); color: var(--text); font-family: var(--sans); font-size: 15px; line-height: 1.6; }
+  body { min-height: 100vh; }
+
+  /* ── Key prompt overlay ── */
+  #key-overlay {
+    position: fixed; inset: 0; background: var(--bg);
+    display: flex; align-items: center; justify-content: center;
+    z-index: 100; padding: 2rem;
+  }
+  #key-overlay.hidden { display: none; }
+  .key-box {
+    width: 100%; max-width: 440px;
+    border: 1px solid var(--border); border-radius: var(--radius);
+    background: var(--bg2); padding: 2.5rem;
+  }
+  .key-box h2 { font-family: var(--serif); font-size: 1.6rem; font-weight: 400; margin-bottom: 0.4rem; }
+  .key-box p { font-size: 13px; color: var(--text2); margin-bottom: 1.5rem; line-height: 1.7; }
+  .key-box a { color: var(--accent); }
+  .key-input-row { display: flex; gap: 8px; }
+  .key-input-row input {
+    flex: 1; background: var(--bg3); border: 1px solid var(--border);
+    border-radius: var(--radius-sm); color: var(--text); font-family: var(--mono);
+    font-size: 13px; padding: 10px 12px; outline: none;
+  }
+  .key-input-row input:focus { border-color: var(--accent); }
+  .key-input-row input::placeholder { color: var(--text3); }
+  .btn-primary {
+    background: var(--accent); color: #1a1510; font-family: var(--sans);
+    font-size: 13px; font-weight: 500; border: none; border-radius: var(--radius-sm);
+    padding: 10px 18px; cursor: pointer; white-space: nowrap;
+  }
+  .btn-primary:hover { opacity: 0.88; }
+  .key-error { font-size: 12px; color: #c47a7a; margin-top: 8px; display: none; }
+
+  /* ── App shell ── */
+  #app { display: none; max-width: 780px; margin: 0 auto; padding: 0 1.5rem 4rem; }
+  #app.visible { display: block; }
+
+  header { padding: 2.5rem 0 0; border-bottom: 1px solid var(--border); margin-bottom: 2rem; }
+  .header-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; margin-bottom: 1.5rem; flex-wrap: wrap; }
+  .header-title { font-family: var(--serif); font-size: 2rem; font-weight: 400; letter-spacing: -0.01em; }
+  .header-title span { color: var(--accent); font-style: italic; }
+  .header-sub { font-size: 12px; color: var(--text3); margin-top: 3px; font-family: var(--mono); }
+  .header-actions { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+  .btn-ghost {
+    background: transparent; border: 1px solid var(--border); border-radius: var(--radius-sm);
+    color: var(--text2); font-size: 12px; font-family: var(--sans); padding: 7px 12px;
+    cursor: pointer; display: flex; align-items: center; gap: 6px;
+  }
+  .btn-ghost:hover { border-color: var(--border-hover); color: var(--text); }
+  .btn-ghost svg { opacity: 0.6; }
+
+  /* ── Tabs ── */
+  .tabs { display: flex; gap: 0; }
+  .tab-btn {
+    background: transparent; border: none; border-bottom: 2px solid transparent;
+    color: var(--text3); font-size: 13px; font-family: var(--sans); font-weight: 400;
+    padding: 10px 16px 10px 0; cursor: pointer; margin-right: 16px;
+    transition: color 0.15s, border-color 0.15s;
+  }
+  .tab-btn:hover { color: var(--text2); }
+  .tab-btn.active { color: var(--text); border-bottom-color: var(--accent); }
+  .tab-count { font-size: 10px; font-family: var(--mono); background: var(--bg3); border: 1px solid var(--border); border-radius: 99px; padding: 1px 6px; margin-left: 5px; color: var(--text3); }
+
+  /* ── Panels ── */
+  .panel { display: none; }
+  .panel.active { display: block; }
+
+  /* ── Filter & action row ── */
+  .controls { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px; margin-bottom: 1.25rem; }
+  .filters { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+  .filter-label { font-size: 11px; color: var(--text3); font-family: var(--mono); margin-right: 2px; }
+  .filter-chip {
+    font-size: 11px; font-family: var(--mono); padding: 4px 11px; border-radius: 99px;
+    border: 1px solid var(--border); color: var(--text3); background: transparent; cursor: pointer;
+    transition: all 0.12s;
+  }
+  .filter-chip:hover { border-color: var(--border-hover); color: var(--text2); }
+  .filter-chip.on-all { border-color: var(--border-hover); color: var(--text); }
+  .filter-chip.on-theory { background: var(--theory-bg); border-color: var(--theory); color: var(--theory); }
+  .filter-chip.on-experimental { background: var(--exp-bg); border-color: var(--exp); color: var(--exp); }
+  .filter-chip.on-computational { background: var(--comp-bg); border-color: var(--comp); color: var(--comp); }
+
+  .btn-refresh {
+    background: transparent; border: 1px solid var(--border); border-radius: var(--radius-sm);
+    color: var(--text2); font-size: 12px; font-family: var(--sans); padding: 7px 14px;
+    cursor: pointer; display: flex; align-items: center; gap: 7px; flex-shrink: 0;
+  }
+  .btn-refresh:hover { border-color: var(--border-hover); color: var(--text); }
+  .btn-refresh:disabled { opacity: 0.4; cursor: not-allowed; }
+  .spinner { width: 13px; height: 13px; border: 1.5px solid var(--border-hover); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.7s linear infinite; flex-shrink: 0; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* ── Legend ── */
+  .legend { display: flex; gap: 16px; margin-bottom: 1rem; flex-wrap: wrap; }
+  .legend-item { display: flex; align-items: center; gap: 5px; font-size: 11px; color: var(--text3); font-family: var(--mono); }
+  .legend-pip { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+
+  /* ── Article cards ── */
+  .article-card {
+    border: 1px solid var(--border); border-radius: var(--radius);
+    background: var(--bg2); padding: 1.25rem 1.4rem; margin-bottom: 10px;
+    border-left-width: 3px; transition: border-color 0.12s;
+    animation: fadeUp 0.3s ease both;
+  }
+  .article-card:hover { border-color: var(--border-hover); }
+  .article-card[data-type="theory"] { border-left-color: var(--theory); }
+  .article-card[data-type="experimental"] { border-left-color: var(--exp); }
+  .article-card[data-type="computational"] { border-left-color: var(--comp); }
+  .article-card[data-type="unknown"] { border-left-color: var(--border); }
+  @keyframes fadeUp { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+
+  .article-meta { display: flex; align-items: center; gap: 7px; margin-bottom: 6px; flex-wrap: wrap; }
+  .article-source { font-size: 10px; color: var(--text3); font-family: var(--mono); text-transform: uppercase; letter-spacing: 0.06em; }
+  .type-badge { font-size: 10px; font-family: var(--mono); padding: 2px 8px; border-radius: 99px; }
+  .type-theory { background: var(--theory-bg); color: var(--theory); border: 1px solid rgba(155,142,196,0.3); }
+  .type-experimental { background: var(--exp-bg); color: var(--exp); border: 1px solid rgba(122,184,160,0.3); }
+  .type-computational { background: var(--comp-bg); color: var(--comp); border: 1px solid rgba(196,164,107,0.3); }
+  .type-unknown { background: var(--bg3); color: var(--text3); border: 1px solid var(--border); }
+  .author-badge { font-size: 10px; font-family: var(--mono); padding: 2px 8px; border-radius: 99px; background: rgba(200,184,154,0.12); color: var(--accent); border: 1px solid rgba(200,184,154,0.25); }
+
+  .article-title { font-family: var(--serif); font-size: 1.05rem; font-weight: 400; line-height: 1.45; margin-bottom: 7px; }
+  .article-title a { color: var(--text); text-decoration: none; }
+  .article-title a:hover { color: var(--accent); }
+  .article-summary { font-size: 13px; color: var(--text2); line-height: 1.7; }
+  .article-footer { margin-top: 10px; display: flex; gap: 5px; flex-wrap: wrap; }
+  .atag { font-size: 10px; font-family: var(--mono); padding: 2px 8px; border-radius: 99px; background: var(--bg3); color: var(--text3); border: 1px solid var(--border); }
+
+  /* ── Skeleton ── */
+  .skel { background: var(--bg3); border-radius: 4px; animation: pulse 1.4s ease-in-out infinite; }
+  @keyframes pulse { 0%,100%{opacity:1}50%{opacity:0.4} }
+
+  /* ── Empty / status ── */
+  .empty-state { text-align: center; padding: 3rem 1rem; color: var(--text3); font-size: 13px; }
+  .status-msg { font-size: 12px; color: var(--text3); font-family: var(--mono); text-align: center; padding: 0.75rem; }
+
+  /* ── Settings ── */
+  .settings-card { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius); padding: 1.5rem; }
+  .settings-section { margin-bottom: 2rem; }
+  .settings-section:last-child { margin-bottom: 0; }
+  .settings-heading { font-size: 11px; font-family: var(--mono); color: var(--text3); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 0.75rem; }
+  .settings-desc { font-size: 12px; color: var(--text3); margin-bottom: 0.75rem; line-height: 1.6; }
+  .scientist-list { display: flex; flex-direction: column; gap: 6px; margin-bottom: 10px; }
+  .scientist-row { display: flex; align-items: center; justify-content: space-between; background: var(--bg3); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 8px 12px; font-size: 13px; }
+  .remove-btn { background: transparent; border: none; color: var(--text3); cursor: pointer; font-size: 18px; line-height: 1; padding: 0 2px; }
+  .remove-btn:hover { color: #c47a7a; }
+  .add-row { display: flex; gap: 8px; }
+  .add-row input {
+    flex: 1; background: var(--bg3); border: 1px solid var(--border);
+    border-radius: var(--radius-sm); color: var(--text); font-family: var(--sans);
+    font-size: 13px; padding: 8px 12px; outline: none;
+  }
+  .add-row input:focus { border-color: var(--accent); }
+  .add-row input::placeholder { color: var(--text3); }
+  .add-row button {
+    padding: 8px 14px; font-size: 13px; font-family: var(--sans);
+    border: 1px solid var(--border); border-radius: var(--radius-sm);
+    background: transparent; color: var(--text2); cursor: pointer;
+  }
+  .add-row button:hover { border-color: var(--border-hover); color: var(--text); }
+  .subfield-grid { display: flex; flex-wrap: wrap; gap: 6px; }
+  .subfield-chip { font-size: 11px; font-family: var(--mono); padding: 5px 12px; border-radius: 99px; border: 1px solid var(--border); background: transparent; color: var(--text3); cursor: pointer; }
+  .subfield-chip:hover { border-color: var(--border-hover); color: var(--text2); }
+  .subfield-chip.on { background: rgba(200,184,154,0.1); border-color: rgba(200,184,154,0.4); color: var(--accent); }
+  .settings-footer { display: flex; align-items: center; gap: 12px; margin-top: 1.5rem; padding-top: 1.5rem; border-top: 1px solid var(--border); }
+  .btn-save { background: var(--accent); color: #1a1510; font-family: var(--sans); font-size: 13px; font-weight: 500; border: none; border-radius: var(--radius-sm); padding: 9px 20px; cursor: pointer; }
+  .btn-save:hover { opacity: 0.88; }
+  .btn-clear-key { background: transparent; border: 1px solid var(--border); border-radius: var(--radius-sm); color: var(--text3); font-size: 12px; font-family: var(--sans); padding: 9px 14px; cursor: pointer; }
+  .btn-clear-key:hover { border-color: #c47a7a; color: #c47a7a; }
+  .save-confirm { font-size: 12px; color: var(--accent2); font-family: var(--mono); display: none; }
+
+  /* ── Weekend notice ── */
+  .notice { font-size: 12px; color: var(--text3); font-family: var(--mono); background: var(--bg3); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 0.65rem 1rem; margin-bottom: 1rem; display: none; }
+
+  /* ── Scrollbar ── */
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--bg3); border-radius: 3px; }
+</style>
+</head>
+<body>
+
+<!-- API Key Overlay -->
+<div id="key-overlay">
+  <div class="key-box">
+    <h2>Morning Science <span style="font-style:italic;color:var(--accent)">Feed</span></h2>
+    <p>Enter your Anthropic API key to get started. It's saved locally in your browser — you won't need to enter it again. You can get a key at <a href="https://console.anthropic.com" target="_blank">console.anthropic.com</a>.</p>
+    <div class="key-input-row">
+      <input type="password" id="key-input" placeholder="sk-ant-..." autocomplete="off" />
+      <button class="btn-primary" onclick="submitKey()">Continue</button>
+    </div>
+    <div class="key-error" id="key-error">Please enter a valid API key (starts with sk-ant-).</div>
+  </div>
+</div>
+
+<!-- Main App -->
+<div id="app">
+  <header>
+    <div class="header-top">
+      <div>
+        <div class="header-title">Morning Science <span>Feed</span></div>
+        <div class="header-sub" id="today-date"></div>
+      </div>
+      <div class="header-actions">
+        <span id="last-updated" style="font-size:11px;color:var(--text3);font-family:var(--mono);"></span>
+        <button class="btn-ghost" onclick="showTab('settings')">
+          <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="8" r="2.5"/><path d="M8 1v1.5M8 13.5V15M1 8h1.5M13.5 8H15M3.05 3.05l1.06 1.06M11.89 11.89l1.06 1.06M3.05 12.95l1.06-1.06M11.89 4.11l1.06-1.06"/></svg>
+          Settings
+        </button>
+      </div>
+    </div>
+    <div class="tabs">
+      <button class="tab-btn active" id="tab-cmp" onclick="showTab('cmp')">Condensed matter <span class="tab-count" id="cmp-count">0</span></button>
+      <button class="tab-btn" id="tab-authors" onclick="showTab('authors')">By scientist <span class="tab-count" id="author-count">0</span></button>
+    </div>
+  </header>
+
+  <!-- CMP Panel -->
+  <div id="panel-cmp" class="panel active">
+    <div class="notice" id="notice-cmp"></div>
+    <div class="legend">
+      <span class="legend-item"><span class="legend-pip" style="background:var(--theory)"></span>Theory</span>
+      <span class="legend-item"><span class="legend-pip" style="background:var(--exp)"></span>Experimental</span>
+      <span class="legend-item"><span class="legend-pip" style="background:var(--comp)"></span>Computational</span>
+    </div>
+    <div class="controls">
+      <div class="filters">
+        <span class="filter-label">show</span>
+        <span class="filter-chip on-all" id="fc-all" onclick="setFilter('cmp','all')">all</span>
+        <span class="filter-chip" id="fc-theory" onclick="setFilter('cmp','theory')">theory</span>
+        <span class="filter-chip" id="fc-experimental" onclick="setFilter('cmp','experimental')">experimental</span>
+        <span class="filter-chip" id="fc-computational" onclick="setFilter('cmp','computational')">computational</span>
+      </div>
+      <button class="btn-refresh" id="btn-cmp" onclick="loadCMP(true)">
+        <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M13.5 8A5.5 5.5 0 1 1 8 2.5M13.5 2.5v3.5H10"/></svg>
+        Refresh
+      </button>
+    </div>
+    <div id="cmp-articles"></div>
+    <div id="cmp-status"></div>
+  </div>
+
+  <!-- Authors Panel -->
+  <div id="panel-authors" class="panel">
+    <div class="notice" id="notice-authors"></div>
+    <div class="legend">
+      <span class="legend-item"><span class="legend-pip" style="background:var(--theory)"></span>Theory</span>
+      <span class="legend-item"><span class="legend-pip" style="background:var(--exp)"></span>Experimental</span>
+      <span class="legend-item"><span class="legend-pip" style="background:var(--comp)"></span>Computational</span>
+    </div>
+    <div class="controls">
+      <div class="filters">
+        <span class="filter-label">show</span>
+        <span class="filter-chip on-all" id="afc-all" onclick="setFilter('authors','all')">all</span>
+        <span class="filter-chip" id="afc-theory" onclick="setFilter('authors','theory')">theory</span>
+        <span class="filter-chip" id="afc-experimental" onclick="setFilter('authors','experimental')">experimental</span>
+        <span class="filter-chip" id="afc-computational" onclick="setFilter('authors','computational')">computational</span>
+      </div>
+      <button class="btn-refresh" id="btn-authors" onclick="loadAuthors(true)">
+        <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M13.5 8A5.5 5.5 0 1 1 8 2.5M13.5 2.5v3.5H10"/></svg>
+        Refresh
+      </button>
+    </div>
+    <div id="author-articles"></div>
+    <div id="author-status"></div>
+  </div>
+
+  <!-- Settings Panel -->
+  <div id="panel-settings" class="panel">
+    <div class="settings-card">
+      <div class="settings-section">
+        <div class="settings-heading">Scientist watchlist</div>
+        <div class="settings-desc">Articles by these researchers appear in the "By scientist" tab.</div>
+        <div class="scientist-list" id="scientist-list"></div>
+        <div class="add-row">
+          <input type="text" id="scientist-input" placeholder="e.g. Pablo Jarillo-Herrero" onkeydown="if(event.key==='Enter')addScientist()" />
+          <button onclick="addScientist()">Add</button>
+        </div>
+      </div>
+      <div class="settings-section">
+        <div class="settings-heading">Subfields to prioritize</div>
+        <div class="subfield-grid" id="subfield-grid"></div>
+      </div>
+      <div class="settings-footer">
+        <button class="btn-save" onclick="saveSettings()">Save settings</button>
+        <button class="btn-clear-key" onclick="clearKey()">Change API key</button>
+        <span class="save-confirm" id="save-confirm">Saved.</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const SUBFIELDS_DEFAULT = ['Superconductivity','Topological materials','Quantum materials','2D materials'];
+const CACHE_CMP = 'msf_cmp_v3';
+const CACHE_AUTHORS = 'msf_authors_v3';
+const SETTINGS_KEY = 'msf_settings_v2';
+const API_KEY_STORAGE = 'msf_api_key';
+
+let settings = { scientists: [], subfields: [...SUBFIELDS_DEFAULT] };
+let filters = { cmp: 'all', authors: 'all' };
+let allArticles = { cmp: [], authors: [] };
+
+const today = new Date();
+const isWeekday = today.getDay() >= 1 && today.getDay() <= 5;
+
+function todayKey() { return today.toISOString().split('T')[0]; }
+function formatDate(d) {
+  return d.toLocaleDateString('en-US', { weekday:'long', month:'long', day:'numeric', year:'numeric' });
+}
+
+// ── API Key handling ──
+function getKey() { return localStorage.getItem(API_KEY_STORAGE) || ''; }
+
+function submitKey() {
+  const val = document.getElementById('key-input').value.trim();
+  if (!val.startsWith('sk-ant-') && !val.startsWith('sk-')) {
+    document.getElementById('key-error').style.display = 'block';
+    return;
+  }
+  localStorage.setItem(API_KEY_STORAGE, val);
+  document.getElementById('key-overlay').classList.add('hidden');
+  document.getElementById('app').classList.add('visible');
+  init();
+}
+
+function clearKey() {
+  localStorage.removeItem(API_KEY_STORAGE);
+  location.reload();
+}
+
+document.getElementById('key-input').addEventListener('keydown', e => {
+  if (e.key === 'Enter') submitKey();
+});
+
+// ── Boot ──
+if (getKey()) {
+  document.getElementById('key-overlay').classList.add('hidden');
+  document.getElementById('app').classList.add('visible');
+  document.addEventListener('DOMContentLoaded', init);
+} else {
+  document.addEventListener('DOMContentLoaded', () => {});
+}
+
+// ── Tab navigation ──
+function showTab(name) {
+  ['cmp','authors','settings'].forEach(t => {
+    document.getElementById('panel-'+t).classList.toggle('active', t===name);
+    const btn = document.getElementById('tab-'+t);
+    if (btn) btn.classList.toggle('active', t===name);
+  });
+  if (name === 'authors' && allArticles.authors.length === 0) loadAuthors(false);
+}
+
+// ── Filters ──
+function setFilter(tab, value) {
+  filters[tab] = value;
+  const prefix = tab==='cmp' ? 'fc' : 'afc';
+  ['all','theory','experimental','computational'].forEach(v => {
+    const el = document.getElementById(prefix+'-'+v);
+    if (el) el.className = 'filter-chip' + (v===value ? ' on-'+value : '');
+  });
+  applyFilter(tab);
+}
+
+function applyFilter(tab) {
+  const containerId = tab+'-articles';
+  const countId = tab+'-count';
+  const articles = allArticles[tab];
+  const f = filters[tab];
+  const filtered = f==='all' ? articles : articles.filter(a=>(a.type||'').toLowerCase()===f);
+  document.getElementById(countId).textContent = filtered.length;
+  if (!filtered.length) {
+    document.getElementById(containerId).innerHTML = `<div class="empty-state">No ${f==='all'?'':f+' '}articles found.</div>`;
+    return;
+  }
+  document.getElementById(containerId).innerHTML = filtered.map((a, i) => {
+    const type = (a.type||'unknown').toLowerCase();
+    const tagsHtml = (a.tags||[]).map(t=>`<span class="atag">${t}</span>`).join('');
+    const authorBadge = a.matchedAuthor ? `<span class="author-badge">${a.matchedAuthor}</span>` : '';
+    const typeBadge = typeBadgeHtml(a.type);
+    const titleHtml = a.url ? `<a href="${a.url}" target="_blank">${a.title}</a>` : a.title;
+    return `<div class="article-card" data-type="${type}" style="animation-delay:${i*40}ms">
+      <div class="article-meta">
+        <span class="article-source">${a.source||'Research'}</span>
+        ${typeBadge}${authorBadge}
+      </div>
+      <div class="article-title">${titleHtml}</div>
+      <div class="article-summary">${a.summary}</div>
+      <div class="article-footer">${tagsHtml}</div>
+    </div>`;
+  }).join('');
+}
+
+function typeBadgeHtml(type) {
+  const t = (type||'').toLowerCase();
+  if (t==='theory') return '<span class="type-badge type-theory">theory</span>';
+  if (t==='experimental') return '<span class="type-badge type-experimental">experimental</span>';
+  if (t==='computational') return '<span class="type-badge type-computational">computational</span>';
+  return '<span class="type-badge type-unknown">unknown</span>';
+}
+
+function renderSkeleton(containerId, n=6) {
+  document.getElementById(containerId).innerHTML = Array.from({length:n}, (_,i) => `
+    <div class="article-card" style="opacity:${1-i*0.1};border-left-color:var(--border)">
+      <div style="display:flex;gap:8px;margin-bottom:8px;">
+        <div class="skel" style="height:10px;width:70px;"></div>
+        <div class="skel" style="height:10px;width:60px;"></div>
+      </div>
+      <div class="skel" style="height:18px;width:85%;margin-bottom:8px;"></div>
+      <div class="skel" style="height:12px;width:60%;margin-bottom:12px;"></div>
+      <div class="skel" style="height:12px;width:100%;margin-bottom:4px;"></div>
+      <div class="skel" style="height:12px;width:92%;margin-bottom:4px;"></div>
+      <div class="skel" style="height:12px;width:78%;"></div>
+    </div>`).join('');
+}
+
+// ── API call ──
+async function callAPI(prompt) {
+  const key = getKey();
+  const response = await fetch("https://api.anthropic.com/v1/messages", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "x-api-key": key,
+      "anthropic-version": "2023-06-01",
+      "anthropic-dangerous-direct-browser-access": "true"
+    },
+    body: JSON.stringify({
+      model: "claude-sonnet-4-20250514",
+      max_tokens: 4000,
+      tools: [{ type: "web_search_20250305", name: "web_search" }],
+      messages: [{ role: "user", content: prompt }]
+    })
+  });
+  if (!response.ok) {
+    const err = await response.json().catch(()=>({}));
+    throw new Error(err.error?.message || 'API error '+response.status);
+  }
+  const data = await response.json();
+  const fullText = (data.content||[]).filter(b=>b.type==='text').map(b=>b.text).join('\n');
+  const match = fullText.match(/\[[\s\S]*\]/);
+  if (!match) throw new Error('No JSON array in response');
+  return JSON.parse(match[0]);
+}
+
+// ── Load CMP feed ──
+async function loadCMP(force=false) {
+  const btn = document.getElementById('btn-cmp');
+  const status = document.getElementById('cmp-status');
+  if (!force) {
+    try {
+      const cached = JSON.parse(localStorage.getItem(CACHE_CMP)||'null');
+      if (cached && (cached.date===todayKey()||!isWeekday)) {
+        allArticles.cmp = cached.articles;
+        applyFilter('cmp');
+        document.getElementById('last-updated').textContent = 'updated '+cached.time;
+        return;
+      }
+    } catch(e) {}
+  }
+  btn.disabled = true;
+  btn.innerHTML = '<div class="spinner"></div> Fetching…';
+  renderSkeleton('cmp-articles');
+  status.innerHTML = '<div class="status-msg">searching recent condensed matter literature…</div>';
+
+  const subfields = settings.subfields.join(', ');
+  const prompt = `You are a science news aggregator. Today is ${formatDate(today)}.
+
+Search for 7 recent significant research articles published in the last 14 days in condensed matter physics, prioritizing these subfields: ${subfields}.
+
+Respond ONLY with a valid JSON array, no markdown, no code fences. Each object must have:
+- "title": article title
+- "source": journal or preprint server (e.g. "Nature", "Physical Review Letters", "arXiv", "Science")
+- "url": URL or empty string
+- "summary": 2-3 sentences: what was studied, key finding, and significance
+- "type": exactly one of "Theory", "Experimental", or "Computational". Theory = analytical/mathematical modeling. Experimental = new measurements, fabrication, or lab data. Computational = primarily numerical simulation or DFT/ML without new experiments.
+- "tags": array of 1-3 tags from: ["Superconductivity","Topological materials","Quantum materials","2D materials","Strongly correlated","Magnetism","Phonons","Transport","Mott insulator","Flat bands"]
+- "matchedAuthor": empty string
+
+Return ONLY the JSON array.`;
+
+  try {
+    const articles = await callAPI(prompt);
+    allArticles.cmp = articles;
+    applyFilter('cmp');
+    const t = new Date().toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'});
+    document.getElementById('last-updated').textContent = 'updated '+t;
+    status.innerHTML = '';
+    localStorage.setItem(CACHE_CMP, JSON.stringify({date:todayKey(),time:t,articles}));
+  } catch(err) {
+    status.innerHTML = `<div class="status-msg">Error: ${err.message}</div>`;
+    document.getElementById('cmp-articles').innerHTML = '';
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '<svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M13.5 8A5.5 5.5 0 1 1 8 2.5M13.5 2.5v3.5H10"/></svg> Refresh';
+  }
+}
+
+// ── Load Authors feed ──
+async function loadAuthors(force=false) {
+  const btn = document.getElementById('btn-authors');
+  const status = document.getElementById('author-status');
+  if (!settings.scientists.length) {
+    allArticles.authors = [];
+    document.getElementById('author-articles').innerHTML = '<div class="empty-state">Add scientists in Settings to see their latest work here.</div>';
+    document.getElementById('author-count').textContent = '0';
+    return;
+  }
+  if (!force) {
+    try {
+      const cached = JSON.parse(localStorage.getItem(CACHE_AUTHORS)||'null');
+      const sameScientists = JSON.stringify(cached?.scientists||[])===JSON.stringify(settings.scientists);
+      if (cached && (cached.date===todayKey()||!isWeekday) && sameScientists) {
+        allArticles.authors = cached.articles;
+        applyFilter('authors');
+        return;
+      }
+    } catch(e) {}
+  }
+  btn.disabled = true;
+  btn.innerHTML = '<div class="spinner"></div> Searching…';
+  renderSkeleton('author-articles', settings.scientists.length * 2);
+  status.innerHTML = '<div class="status-msg">looking up recent publications…</div>';
+
+  const scientistList = settings.scientists.join(', ');
+  const prompt = `You are a science news aggregator. Today is ${formatDate(today)}.
+
+Search for recent research articles (last 30 days) authored or co-authored by ANY of these scientists: ${scientistList}.
+
+Find up to 2 recent articles per scientist. Respond ONLY with a valid JSON array, no markdown, no code fences. Each object:
+- "title": article title
+- "source": journal or preprint server
+- "url": URL or empty string
+- "summary": 2-3 sentences on what was studied, key finding, significance
+- "type": exactly one of "Theory", "Experimental", or "Computational"
+- "tags": array of 1-3 relevant physics topic tags
+- "matchedAuthor": the scientist from the watchlist who authored this paper
+
+Return ONLY the JSON array.`;
+
+  try {
+    const articles = await callAPI(prompt);
+    allArticles.authors = articles;
+    applyFilter('authors');
+    status.innerHTML = '';
+    const t = new Date().toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'});
+    localStorage.setItem(CACHE_AUTHORS, JSON.stringify({date:todayKey(),time:t,articles,scientists:[...settings.scientists]}));
+  } catch(err) {
+    status.innerHTML = `<div class="status-msg">Error: ${err.message}</div>`;
+    document.getElementById('author-articles').innerHTML = '';
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '<svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M13.5 8A5.5 5.5 0 1 1 8 2.5M13.5 2.5v3.5H10"/></svg> Refresh';
+  }
+}
+
+// ── Settings ──
+function renderScientistList() {
+  const list = document.getElementById('scientist-list');
+  if (!settings.scientists.length) {
+    list.innerHTML = '<div style="font-size:12px;color:var(--text3);font-family:var(--mono);padding:4px 0;">No scientists added yet.</div>';
+    return;
+  }
+  list.innerHTML = settings.scientists.map((s,i) =>
+    `<div class="scientist-row"><span>${s}</span><button class="remove-btn" onclick="removeScientist(${i})">×</button></div>`
+  ).join('');
+}
+
+function renderSubfieldGrid() {
+  const ALL = ['Superconductivity','Topological materials','Quantum materials','2D materials','Strongly correlated','Magnetism','Phonons','Transport'];
+  document.getElementById('subfield-grid').innerHTML = ALL.map(s =>
+    `<span class="subfield-chip ${settings.subfields.includes(s)?'on':''}" onclick="toggleSubfield('${s}')">${s}</span>`
+  ).join('');
+}
+
+function toggleSubfield(s) {
+  const idx = settings.subfields.indexOf(s);
+  if (idx>=0) settings.subfields.splice(idx,1); else settings.subfields.push(s);
+  renderSubfieldGrid();
+}
+
+function addScientist() {
+  const input = document.getElementById('scientist-input');
+  const name = input.value.trim();
+  if (!name || settings.scientists.includes(name)) { input.value=''; return; }
+  settings.scientists.push(name);
+  input.value = '';
+  renderScientistList();
+}
+
+function removeScientist(i) {
+  settings.scientists.splice(i,1);
+  renderScientistList();
+}
+
+function saveSettings() {
+  localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
+  renderSubfieldGrid();
+  const c = document.getElementById('save-confirm');
+  c.style.display = 'inline';
+  setTimeout(()=>{ c.style.display='none'; }, 2000);
+}
+
+// ── Init ──
+function init() {
+  document.getElementById('today-date').textContent = formatDate(today);
+
+  if (!isWeekday) {
+    const dn = today.toLocaleDateString('en-US',{weekday:'long'});
+    ['cmp','authors'].forEach(id => {
+      const el = document.getElementById('notice-'+id);
+      if (el) { el.style.display='block'; el.textContent=`It's ${dn} — feed updates on weekdays. Showing cached results, or refresh to reload.`; }
+    });
+  }
+
+  try {
+    const s = JSON.parse(localStorage.getItem(SETTINGS_KEY)||'null');
+    if (s) {
+      settings.scientists = s.scientists || [];
+      settings.subfields = s.subfields || [...SUBFIELDS_DEFAULT];
+    }
+  } catch(e) {}
+
+  renderScientistList();
+  renderSubfieldGrid();
+  loadCMP(false);
+}
+</script>
+</body>
+</html>
