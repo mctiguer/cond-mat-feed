@@ -1,0 +1,537 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Morning Science Feed</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet" />
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #0f0f0f;
+    --bg2: #161616;
+    --bg3: #1e1e1e;
+    --border: rgba(255,255,255,0.08);
+    --border-hover: rgba(255,255,255,0.16);
+    --text: #f0ede8;
+    --text2: #9a9590;
+    --text3: #5a5650;
+    --accent: #c8b89a;
+    --accent2: #8b9e8a;
+    --serif: 'Instrument Serif', Georgia, serif;
+    --mono: 'DM Mono', monospace;
+    --sans: 'DM Sans', system-ui, sans-serif;
+    --radius: 10px;
+    --radius-sm: 6px;
+  }
+
+  html { background: var(--bg); color: var(--text); font-family: var(--sans); font-size: 15px; line-height: 1.6; }
+  body { min-height: 100vh; }
+
+  #app { max-width: 780px; margin: 0 auto; padding: 0 1.5rem 4rem; }
+
+  header { padding: 2.5rem 0 0; border-bottom: 1px solid var(--border); margin-bottom: 2rem; }
+  .header-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; margin-bottom: 1.5rem; flex-wrap: wrap; }
+  .header-title { font-family: var(--serif); font-size: 2rem; font-weight: 400; letter-spacing: -0.01em; }
+  .header-title span { color: var(--accent); font-style: italic; }
+  .header-sub { font-size: 12px; color: var(--text3); margin-top: 3px; font-family: var(--mono); }
+  .header-actions { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+  .updated-label { font-size: 11px; color: var(--text3); font-family: var(--mono); }
+  .btn-ghost {
+    background: transparent; border: 1px solid var(--border); border-radius: var(--radius-sm);
+    color: var(--text2); font-size: 12px; font-family: var(--sans); padding: 7px 12px;
+    cursor: pointer; display: flex; align-items: center; gap: 6px;
+  }
+  .btn-ghost:hover { border-color: var(--border-hover); color: var(--text); }
+
+  .tabs { display: flex; }
+  .tab-btn {
+    background: transparent; border: none; border-bottom: 2px solid transparent;
+    color: var(--text3); font-size: 13px; font-family: var(--sans);
+    padding: 10px 16px 10px 0; cursor: pointer; margin-right: 16px;
+    transition: color 0.15s, border-color 0.15s;
+  }
+  .tab-btn:hover { color: var(--text2); }
+  .tab-btn.active { color: var(--text); border-bottom-color: var(--accent); }
+  .tab-count { font-size: 10px; font-family: var(--mono); background: var(--bg3); border: 1px solid var(--border); border-radius: 99px; padding: 1px 6px; margin-left: 5px; color: var(--text3); }
+
+  .panel { display: none; }
+  .panel.active { display: block; }
+
+  .controls { display: flex; align-items: center; justify-content: flex-end; margin-bottom: 1.25rem; }
+  .btn-refresh {
+    background: transparent; border: 1px solid var(--border); border-radius: var(--radius-sm);
+    color: var(--text2); font-size: 12px; font-family: var(--sans); padding: 7px 14px;
+    cursor: pointer; display: flex; align-items: center; gap: 7px;
+  }
+  .btn-refresh:hover { border-color: var(--border-hover); color: var(--text); }
+  .btn-refresh:disabled { opacity: 0.4; cursor: not-allowed; }
+  .spinner { width: 13px; height: 13px; border: 1.5px solid var(--border-hover); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.7s linear infinite; flex-shrink: 0; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .article-card {
+    border: 1px solid var(--border); border-radius: var(--radius);
+    background: var(--bg2); padding: 1.25rem 1.4rem; margin-bottom: 10px;
+    transition: border-color 0.12s;
+    animation: fadeUp 0.25s ease both;
+  }
+  .article-card:hover { border-color: var(--border-hover); }
+  @keyframes fadeUp { from { opacity:0; transform:translateY(5px); } to { opacity:1; transform:translateY(0); } }
+
+  .article-meta { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; flex-wrap: wrap; }
+  .article-source { font-size: 10px; color: var(--text3); font-family: var(--mono); text-transform: uppercase; letter-spacing: 0.06em; }
+  .article-date { font-size: 10px; color: var(--text3); font-family: var(--mono); }
+  .author-badge { font-size: 10px; font-family: var(--mono); padding: 2px 8px; border-radius: 99px; background: rgba(200,184,154,0.12); color: var(--accent); border: 1px solid rgba(200,184,154,0.25); }
+  .oa-badge { font-size: 10px; font-family: var(--mono); padding: 2px 8px; border-radius: 99px; background: rgba(139,158,138,0.12); color: var(--accent2); border: 1px solid rgba(139,158,138,0.25); }
+
+  .article-title { font-family: var(--serif); font-size: 1.05rem; font-weight: 400; line-height: 1.45; margin-bottom: 6px; }
+  .article-title a { color: var(--text); text-decoration: none; }
+  .article-title a:hover { color: var(--accent); }
+
+  .article-authors { font-size: 12px; color: var(--text3); font-family: var(--mono); margin-bottom: 8px; }
+
+  .abstract-text { font-size: 13px; color: var(--text2); line-height: 1.7; }
+  .abstract-truncated { display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+  .expand-btn { background: transparent; border: none; color: var(--text3); font-size: 11px; font-family: var(--mono); cursor: pointer; margin-top: 5px; padding: 0; display: block; }
+  .expand-btn:hover { color: var(--accent); }
+
+  .article-footer { margin-top: 10px; display: flex; gap: 5px; flex-wrap: wrap; }
+  .atag { font-size: 10px; font-family: var(--mono); padding: 2px 8px; border-radius: 99px; background: var(--bg3); color: var(--text3); border: 1px solid var(--border); }
+
+  .skel { background: var(--bg3); border-radius: 4px; animation: pulse 1.4s ease-in-out infinite; }
+  @keyframes pulse { 0%,100%{opacity:1}50%{opacity:0.4} }
+
+  .empty-state { text-align: center; padding: 3rem 1rem; color: var(--text3); font-size: 13px; font-family: var(--mono); }
+  .status-msg { font-size: 12px; color: var(--text3); font-family: var(--mono); text-align: center; padding: 0.75rem; }
+  .error-msg { font-size: 12px; color: #c47a7a; font-family: var(--mono); text-align: center; padding: 0.75rem; }
+
+  .notice { font-size: 12px; color: var(--text3); font-family: var(--mono); background: var(--bg3); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 0.65rem 1rem; margin-bottom: 1rem; display: none; }
+
+  /* Settings */
+  .settings-card { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius); padding: 1.5rem; }
+  .settings-section { margin-bottom: 2rem; }
+  .settings-section:last-child { margin-bottom: 0; }
+  .settings-heading { font-size: 11px; font-family: var(--mono); color: var(--text3); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 0.75rem; }
+  .settings-desc { font-size: 12px; color: var(--text3); margin-bottom: 0.75rem; line-height: 1.6; font-family: var(--mono); }
+  .scientist-list { display: flex; flex-direction: column; gap: 6px; margin-bottom: 10px; }
+  .scientist-row { display: flex; align-items: center; justify-content: space-between; background: var(--bg3); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 8px 12px; font-size: 13px; font-family: var(--mono); }
+  .remove-btn { background: transparent; border: none; color: var(--text3); cursor: pointer; font-size: 18px; line-height: 1; padding: 0 2px; }
+  .remove-btn:hover { color: #c47a7a; }
+  .add-row { display: flex; gap: 8px; }
+  .add-row input { flex: 1; background: var(--bg3); border: 1px solid var(--border); border-radius: var(--radius-sm); color: var(--text); font-family: var(--mono); font-size: 13px; padding: 8px 12px; outline: none; }
+  .add-row input:focus { border-color: var(--accent); }
+  .add-row input::placeholder { color: var(--text3); }
+  .add-row button { padding: 8px 14px; font-size: 13px; font-family: var(--sans); border: 1px solid var(--border); border-radius: var(--radius-sm); background: transparent; color: var(--text2); cursor: pointer; }
+  .add-row button:hover { border-color: var(--border-hover); color: var(--text); }
+  .subfield-grid { display: flex; flex-wrap: wrap; gap: 6px; }
+  .subfield-chip { font-size: 11px; font-family: var(--mono); padding: 5px 12px; border-radius: 99px; border: 1px solid var(--border); background: transparent; color: var(--text3); cursor: pointer; }
+  .subfield-chip:hover { border-color: var(--border-hover); color: var(--text2); }
+  .subfield-chip.on { background: rgba(200,184,154,0.1); border-color: rgba(200,184,154,0.4); color: var(--accent); }
+  .settings-footer { display: flex; align-items: center; gap: 12px; margin-top: 1.5rem; padding-top: 1.5rem; border-top: 1px solid var(--border); }
+  .btn-save { background: var(--accent); color: #1a1510; font-family: var(--sans); font-size: 13px; font-weight: 500; border: none; border-radius: var(--radius-sm); padding: 9px 20px; cursor: pointer; }
+  .btn-save:hover { opacity: 0.88; }
+  .save-confirm { font-size: 12px; color: var(--accent2); font-family: var(--mono); display: none; }
+
+  .meta-divider { color: var(--text3); font-size: 10px; }
+
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--bg3); border-radius: 3px; }
+</style>
+</head>
+<body>
+<div id="app">
+  <header>
+    <div class="header-top">
+      <div>
+        <div class="header-title">Morning Science <span>Feed</span></div>
+        <div class="header-sub" id="today-date"></div>
+      </div>
+      <div class="header-actions">
+        <span class="updated-label" id="last-updated"></span>
+        <button class="btn-ghost" onclick="showTab('settings')">
+          <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="8" r="2.5"/><path d="M8 1v1.5M8 13.5V15M1 8h1.5M13.5 8H15M3.05 3.05l1.06 1.06M11.89 11.89l1.06 1.06M3.05 12.95l1.06-1.06M11.89 4.11l1.06-1.06"/></svg>
+          Settings
+        </button>
+      </div>
+    </div>
+    <div class="tabs">
+      <button class="tab-btn active" id="tab-cmp" onclick="showTab('cmp')">Condensed matter <span class="tab-count" id="cmp-count">0</span></button>
+      <button class="tab-btn" id="tab-authors" onclick="showTab('authors')">By scientist <span class="tab-count" id="author-count">0</span></button>
+    </div>
+  </header>
+
+  <!-- CMP Panel -->
+  <div id="panel-cmp" class="panel active">
+
+      <button class="btn-refresh" id="btn-cmp" onclick="loadCMP(true)">
+        <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M13.5 8A5.5 5.5 0 1 1 8 2.5M13.5 2.5v3.5H10"/></svg>
+        Refresh
+      </button>
+    </div>
+    <div id="cmp-articles"></div>
+    <div id="cmp-status"></div>
+  </div>
+
+  <!-- Authors Panel -->
+  <div id="panel-authors" class="panel">
+
+      <button class="btn-refresh" id="btn-authors" onclick="loadAuthors(true)">
+        <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M13.5 8A5.5 5.5 0 1 1 8 2.5M13.5 2.5v3.5H10"/></svg>
+        Refresh
+      </button>
+    </div>
+    <div id="author-articles"></div>
+    <div id="author-status"></div>
+  </div>
+
+  <!-- Settings Panel -->
+  <div id="panel-settings" class="panel">
+    <div class="settings-card">
+      <div class="settings-section">
+        <div class="settings-heading">Scientist watchlist</div>
+        <div class="settings-desc">Articles by these researchers appear in the "By scientist" tab.</div>
+        <div class="scientist-list" id="scientist-list"></div>
+        <div class="add-row">
+          <input type="text" id="scientist-input" placeholder="e.g. Pablo Jarillo-Herrero" onkeydown="if(event.key==='Enter')addScientist()" />
+          <button onclick="addScientist()">Add</button>
+        </div>
+      </div>
+      <div class="settings-section">
+        <div class="settings-heading">Subfields to prioritize</div>
+        <div class="settings-desc">Used as search terms alongside "condensed matter".</div>
+        <div class="subfield-grid" id="subfield-grid"></div>
+      </div>
+      <div class="settings-footer">
+        <button class="btn-save" onclick="saveSettings()">Save settings</button>
+        <span class="save-confirm" id="save-confirm">Saved.</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const SUBFIELDS_DEFAULT = ['Superconductivity','Topological materials','Quantum materials','2D materials'];
+const CACHE_CMP = 'ss_cmp_v1';
+const CACHE_AUTHORS = 'ss_authors_v1';
+const SETTINGS_KEY = 'ss_settings_v1';
+const SS_BASE = 'https://api.semanticscholar.org/graph/v1';
+const FIELDS = 'title,abstract,authors,year,publicationDate,venue,externalIds,openAccessPdf,fieldsOfStudy';
+
+let settings = { scientists: [], subfields: [...SUBFIELDS_DEFAULT] };
+let expanded = {};
+
+const today = new Date();
+
+
+function todayKey() { return today.toISOString().split('T')[0]; }
+function formatDate(d) { return d.toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric',year:'numeric'}); }
+function formatPubDate(str) {
+  if (!str) return '';
+  const d = new Date(str);
+  if (isNaN(d)) return str;
+  return d.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});
+}
+
+document.getElementById('today-date').textContent = formatDate(today);
+
+// cutoff: papers from last 14 days
+function dateCutoff(days=14) {
+  const d = new Date();
+  d.setDate(d.getDate() - days);
+  return d.toISOString().split('T')[0];
+}
+
+function showTab(name) {
+  ['cmp','authors','settings'].forEach(t => {
+    document.getElementById('panel-'+t).classList.toggle('active', t===name);
+    const btn = document.getElementById('tab-'+t);
+    if (btn) btn.classList.toggle('active', t===name);
+  });
+  if (name === 'authors' && !localStorage.getItem(CACHE_AUTHORS)) loadAuthors(false);
+}
+
+// ── Semantic Scholar fetch ──
+async function ssSearch(query, limit=10, fromDate=null) {
+  let url = `${SS_BASE}/paper/search?query=${encodeURIComponent(query)}&limit=${limit}&fields=${FIELDS}&sort=PublicationDate`;
+  if (fromDate) url += `&publicationDateOrYear=${fromDate}:`;
+  const res = await fetch(url, { headers: { 'Accept': 'application/json' } });
+  if (!res.ok) throw new Error('Semantic Scholar API error: ' + res.status);
+  const data = await res.json();
+  return data.data || [];
+}
+
+async function ssAuthorSearch(authorName, limit=5) {
+  // 1. find author ID
+  const aRes = await fetch(`${SS_BASE}/author/search?query=${encodeURIComponent(authorName)}&limit=1&fields=authorId,name`, { headers: { 'Accept': 'application/json' } });
+  if (!aRes.ok) throw new Error('Author search failed');
+  const aData = await aRes.json();
+  if (!aData.data?.length) return [];
+  const authorId = aData.data[0].authorId;
+  const resolvedName = aData.data[0].name;
+
+  // 2. get their recent papers
+  const pRes = await fetch(`${SS_BASE}/author/${authorId}/papers?fields=${FIELDS}&limit=${limit}`, { headers: { 'Accept': 'application/json' } });
+  if (!pRes.ok) throw new Error('Papers fetch failed');
+  const pData = await pRes.json();
+  const cutoff = dateCutoff(60);
+  return (pData.data || [])
+    .filter(p => p.publicationDate && p.publicationDate >= cutoff)
+    .slice(0, 3)
+    .map(p => ({ ...p, matchedAuthor: resolvedName }));
+}
+
+// ── Render helpers ──
+function truncateSentences(text, n=3) {
+  if (!text) return null;
+  const sentences = text.match(/[^.!?]+[.!?]+/g) || [];
+  if (sentences.length <= n) return { short: text, full: text, truncated: false };
+  return { short: sentences.slice(0, n).join(' ').trim(), full: text, truncated: true };
+}
+
+function paperUrl(paper) {
+  if (paper.openAccessPdf?.url) return paper.openAccessPdf.url;
+  if (paper.externalIds?.DOI) return `https://doi.org/${paper.externalIds.DOI}`;
+  if (paper.externalIds?.ArXiv) return `https://arxiv.org/abs/${paper.externalIds.ArXiv}`;
+  return `https://www.semanticscholar.org/paper/${paper.paperId}`;
+}
+
+function renderPapers(containerId, countId, papers, matchedAuthorMap={}) {
+  document.getElementById(countId).textContent = papers.length;
+  if (!papers.length) {
+    document.getElementById(containerId).innerHTML = '<div class="empty-state">No recent papers found.</div>';
+    return;
+  }
+  document.getElementById(containerId).innerHTML = papers.map((p, i) => {
+    const url = paperUrl(p);
+    const venue = p.venue || (p.externalIds?.ArXiv ? 'arXiv' : '');
+    const pubDate = formatPubDate(p.publicationDate);
+    const authorList = (p.authors||[]).slice(0,4).map(a=>a.name).join(', ') + ((p.authors||[]).length > 4 ? ' et al.' : '');
+    const abs = truncateSentences(p.abstract);
+    const isOA = !!p.openAccessPdf?.url;
+    const matched = p.matchedAuthor || matchedAuthorMap[p.paperId] || '';
+    const id = 'abs-'+p.paperId;
+
+    return `<div class="article-card" style="animation-delay:${i*35}ms">
+      <div class="article-meta">
+        ${venue ? `<span class="article-source">${venue}</span><span class="meta-divider">·</span>` : ''}
+        ${pubDate ? `<span class="article-date">${pubDate}</span>` : ''}
+        ${matched ? `<span class="author-badge">${matched}</span>` : ''}
+        ${isOA ? `<span class="oa-badge">open access</span>` : ''}
+      </div>
+      <div class="article-title"><a href="${url}" target="_blank">${p.title||'Untitled'}</a></div>
+      ${authorList ? `<div class="article-authors">${authorList}</div>` : ''}
+      ${abs ? `
+        <div class="abstract-text abstract-truncated" id="${id}">${abs.short}</div>
+        ${abs.truncated ? `<button class="expand-btn" onclick="toggleAbstract('${id}', \`${abs.full.replace(/`/g,'\\`')}\`, \`${abs.short.replace(/`/g,'\\`')}\`)">Show more ↓</button>` : ''}
+      ` : '<div class="abstract-text" style="color:var(--text3);font-style:italic;">No abstract available.</div>'}
+    </div>`;
+  }).join('');
+}
+
+function toggleAbstract(id, full, short) {
+  const el = document.getElementById(id);
+  const btn = el.nextElementSibling;
+  if (!el || !btn) return;
+  if (el.classList.contains('abstract-truncated')) {
+    el.classList.remove('abstract-truncated');
+    el.textContent = full;
+    btn.textContent = 'Show less ↑';
+  } else {
+    el.classList.add('abstract-truncated');
+    el.textContent = short;
+    btn.textContent = 'Show more ↓';
+  }
+}
+
+function renderSkeleton(containerId, n=6) {
+  document.getElementById(containerId).innerHTML = Array.from({length:n},(_,i)=>`
+    <div class="article-card" style="opacity:${1-i*0.1}">
+      <div style="display:flex;gap:8px;margin-bottom:8px;">
+        <div class="skel" style="height:10px;width:60px;"></div>
+        <div class="skel" style="height:10px;width:70px;"></div>
+      </div>
+      <div class="skel" style="height:18px;width:82%;margin-bottom:7px;"></div>
+      <div class="skel" style="height:11px;width:55%;margin-bottom:10px;"></div>
+      <div class="skel" style="height:12px;width:100%;margin-bottom:4px;"></div>
+      <div class="skel" style="height:12px;width:94%;margin-bottom:4px;"></div>
+      <div class="skel" style="height:12px;width:80%;"></div>
+    </div>`).join('');
+}
+
+// ── Load CMP feed ──
+async function loadCMP(force=false) {
+  const btn = document.getElementById('btn-cmp');
+  const status = document.getElementById('cmp-status');
+  if (!force) {
+    try {
+      const cached = JSON.parse(localStorage.getItem(CACHE_CMP)||'null');
+      if (cached && cached.date===todayKey()) {
+        renderPapers('cmp-articles','cmp-count', cached.papers);
+        document.getElementById('last-updated').textContent = 'updated '+cached.time;
+        return;
+      }
+    } catch(e) {}
+  }
+
+  btn.disabled = true;
+  btn.innerHTML = '<div class="spinner"></div> Fetching…';
+  renderSkeleton('cmp-articles');
+  status.innerHTML = '<div class="status-msg">querying semantic scholar…</div>';
+
+  try {
+    const cutoff = dateCutoff(14);
+    const queries = settings.subfields.length
+      ? settings.subfields.map(sf => `${sf} condensed matter`)
+      : ['condensed matter physics'];
+
+    // run queries in parallel, deduplicate by paperId
+    const results = await Promise.all(queries.map(q => ssSearch(q, 8, cutoff).catch(()=>[])));
+    const seen = new Set();
+    const papers = [];
+    for (const batch of results) {
+      for (const p of batch) {
+        if (!seen.has(p.paperId) && p.abstract) {
+          seen.add(p.paperId);
+          papers.push(p);
+        }
+      }
+    }
+    // sort by date descending, cap at 10
+    papers.sort((a,b)=>(b.publicationDate||'').localeCompare(a.publicationDate||''));
+    const top = papers.slice(0, 10);
+
+    renderPapers('cmp-articles','cmp-count', top);
+    status.innerHTML = '';
+    const t = new Date().toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'});
+    document.getElementById('last-updated').textContent = 'updated '+t;
+    localStorage.setItem(CACHE_CMP, JSON.stringify({date:todayKey(),time:t,papers:top}));
+  } catch(err) {
+    status.innerHTML = `<div class="error-msg">Error: ${err.message}</div>`;
+    document.getElementById('cmp-articles').innerHTML = '';
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '<svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M13.5 8A5.5 5.5 0 1 1 8 2.5M13.5 2.5v3.5H10"/></svg> Refresh';
+  }
+}
+
+// ── Load Authors feed ──
+async function loadAuthors(force=false) {
+  const btn = document.getElementById('btn-authors');
+  const status = document.getElementById('author-status');
+
+  if (!settings.scientists.length) {
+    document.getElementById('author-articles').innerHTML = '<div class="empty-state">Add scientists in Settings to see their latest work here.</div>';
+    document.getElementById('author-count').textContent = '0';
+    return;
+  }
+
+  if (!force) {
+    try {
+      const cached = JSON.parse(localStorage.getItem(CACHE_AUTHORS)||'null');
+      const same = JSON.stringify(cached?.scientists||[])===JSON.stringify(settings.scientists);
+      if (cached && cached.date===todayKey() && same) {
+        renderPapers('author-articles','author-count', cached.papers);
+        return;
+      }
+    } catch(e) {}
+  }
+
+  btn.disabled = true;
+  btn.innerHTML = '<div class="spinner"></div> Searching…';
+  renderSkeleton('author-articles', settings.scientists.length * 2);
+  status.innerHTML = '<div class="status-msg">looking up recent publications…</div>';
+
+  try {
+    const results = await Promise.all(settings.scientists.map(s => ssAuthorSearch(s).catch(()=>[])));
+    const seen = new Set();
+    const papers = [];
+    for (const batch of results) {
+      for (const p of batch) {
+        if (!seen.has(p.paperId)) {
+          seen.add(p.paperId);
+          papers.push(p);
+        }
+      }
+    }
+    papers.sort((a,b)=>(b.publicationDate||'').localeCompare(a.publicationDate||''));
+
+    renderPapers('author-articles','author-count', papers);
+    status.innerHTML = '';
+    const t = new Date().toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'});
+    localStorage.setItem(CACHE_AUTHORS, JSON.stringify({date:todayKey(),time:t,papers,scientists:[...settings.scientists]}));
+  } catch(err) {
+    status.innerHTML = `<div class="error-msg">Error: ${err.message}</div>`;
+    document.getElementById('author-articles').innerHTML = '';
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '<svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M13.5 8A5.5 5.5 0 1 1 8 2.5M13.5 2.5v3.5H10"/></svg> Refresh';
+  }
+}
+
+// ── Settings ──
+function renderScientistList() {
+  const list = document.getElementById('scientist-list');
+  if (!settings.scientists.length) {
+    list.innerHTML = '<div style="font-size:12px;color:var(--text3);font-family:var(--mono);padding:4px 0;">No scientists added yet.</div>';
+    return;
+  }
+  list.innerHTML = settings.scientists.map((s,i) =>
+    `<div class="scientist-row"><span>${s}</span><button class="remove-btn" onclick="removeScientist(${i})">×</button></div>`
+  ).join('');
+}
+
+function renderSubfieldGrid() {
+  const ALL = ['Superconductivity','Topological materials','Quantum materials','2D materials','Strongly correlated','Magnetism','Phonons','Transport','Mott insulator','Flat bands'];
+  document.getElementById('subfield-grid').innerHTML = ALL.map(s =>
+    `<span class="subfield-chip ${settings.subfields.includes(s)?'on':''}" onclick="toggleSubfield('${s}')">${s}</span>`
+  ).join('');
+}
+
+function toggleSubfield(s) {
+  const idx = settings.subfields.indexOf(s);
+  if (idx>=0) settings.subfields.splice(idx,1); else settings.subfields.push(s);
+  renderSubfieldGrid();
+}
+
+function addScientist() {
+  const input = document.getElementById('scientist-input');
+  const name = input.value.trim();
+  if (!name || settings.scientists.includes(name)) { input.value=''; return; }
+  settings.scientists.push(name);
+  input.value = '';
+  renderScientistList();
+}
+
+function removeScientist(i) {
+  settings.scientists.splice(i,1);
+  renderScientistList();
+}
+
+function saveSettings() {
+  localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
+  renderSubfieldGrid();
+  const c = document.getElementById('save-confirm');
+  c.style.display = 'inline';
+  setTimeout(()=>{ c.style.display='none'; }, 2000);
+}
+
+// ── Init ──
+function init() {
+
+  try {
+    const s = JSON.parse(localStorage.getItem(SETTINGS_KEY)||'null');
+    if (s) { settings.scientists = s.scientists||[]; settings.subfields = s.subfields||[...SUBFIELDS_DEFAULT]; }
+  } catch(e) {}
+  renderScientistList();
+  renderSubfieldGrid();
+  loadCMP(false);
+}
+
+init();
+</script>
+</body>
+</html>
